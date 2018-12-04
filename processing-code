@@ -1,0 +1,423 @@
+//
+// ELISAVA 2018 - 2019
+//
+// PROJECT: Arduino Controlled Processing Game
+//
+// SUBJECT: Usos Acadèmics i Terminologia Específica en Anglès
+//
+// AUTHORS: Bernardo Vázquez Vera &  Miquel Comas Sabadell
+//
+// TEACHER: Joan Gómez Clapers
+//
+// GROUP: 104
+//
+//
+
+
+import processing.serial.*; // import the Processing serial library
+
+/********************************************************************************************* VARIABLES ********************************************************************************************/
+
+Serial myPort; //Create an oject from serial class
+
+float s0; //variable to hold the value of the sensor nº1
+float s1; //variable to hold the value of the sensor nº2
+float s2; //variable to hold the value of the sensor nº3
+float s3; //variable to hold the value of the sensor nº4
+float s4; //variable to hold the value of the sensor nº5
+
+float s0map; //variable to hold the mapped value of the sensor nº1
+float s1map; //variable to hold the mapped value of the sensor nº2
+float s2map; //variable to hold the mapped value of the sensor nº3
+float s3map; //variable to hold the mapped value of the sensor nº4
+float s4map; //variable to hold the mapped value of the sensor nº5
+
+float l = 80; //variable to hold the value of the rectangle length
+float fw = 60; //variable to hold the value of the distance between the rectangle and the end of the screen
+float a = 10;   //variable to hold the value of the rectangle width
+float maximum = l + fw; //maximum space between rectangle corner and the end of the screen
+
+int w = 900;
+int h = 900;
+
+int ballx = 450; // x position of the ball
+int bally = 450; // y position of the ball
+
+int mx = (int)random(1, 2); //initial speed across the X axis
+int my = (int)random(1, 2); //initial speed across the Y axis
+
+int v0 = 0;
+
+int r = 50; //diametre of the ball
+
+int R = 255; //variable to hold the Red color
+int G = 255; //variable to hold the Green color
+int B = 255; //variable to hold the Blue color
+
+int rect1; //white rectangle x
+int rect2; //white rectangle y
+
+int rectred; //rectangle for red player losing
+int rectgreen; //rectangle for green player losing
+int rectblue; //rectangle for blue player losing
+int rectyellow; //rectangle for yellow player losing
+
+int P1; //variable to hold the points of the yellow player
+int P2; //variable to hold the points of the red player
+int P3; //variable to hold the points of the green player
+int P4; //variable to hold the points of the blue player
+
+float plow = 100; //variable to hold the lower variable of the photoresistor
+
+/********************************************************************************************* VOID SETUP ********************************************************************************************/
+
+void setup() {
+  size(900, 900); //size of the screen
+  background(200); // background color
+  frameRate (60); // variable to modify fps
+
+  String portName = Serial.list()[0]; // choose the arduino port
+  myPort = new Serial(this, portName, 9600); // set the port, the port name and the baud rate
+  myPort.bufferUntil('\n'); //trigger serialEvent() after new line
+}
+
+/********************************************************************************************* VOID DRAW ********************************************************************************************/
+
+void draw() {
+  background (0); //background color
+  noStroke(); // don't create stroke in objects
+
+  //mapping values to keep rectangles inside the screen
+  s0map = map (s0, 0, 1024, fw, width - maximum + a);
+  s1map = map (s1, 0, 1024, fw, width - maximum + a);
+  s2map = map (s2, 0, 1024, fw + a, width - maximum);
+  s3map = map (s3, 0, 1024, fw + a, width - maximum);
+  println(s4);
+
+  //paint rectangle YELLOW
+  fill (255, 220, 10);
+  //draw upper rectangle
+  rect (s0map, fw, l, a);
+
+  //paint rectangle GREEN
+  fill (0, 255, 0);
+  //draw lower rectangle
+  rect (s1map, height - fw, l, a);
+
+  //paint rectangle RED
+  fill (255, 0, 0);
+  //draw right rectangle
+  rect (width-fw, s2map, a, l);
+
+  //paint rectangle BLUE
+  fill (0, 0, 255);
+  //draw left rectangle
+  rect (fw, s3map, a, l);
+
+  //YELLOW points
+  fill (255, 220, 10);
+  textSize (14);
+  text(P1, s0map+l/2, 50);
+
+  //RED points
+  fill (255, 0, 0);
+  textSize (14);
+  text(P2, width-40, s2map+l/2);
+
+  //GREEN points
+  fill (0, 255, 0);
+  textSize (14);
+  text(P3, s1map+l/2, height-30);
+
+  //BLUE points
+  fill (0, 0, 255);
+  textSize (14);
+  text(P4, 40, s3map+l/2);
+
+
+  //BALL MOVEMENT
+  fill (R, G, B);
+  ellipse (ballx, bally, r, r);
+  bally = bally+my;
+  ballx = ballx+mx;
+
+
+  //RESTART GAME AT ANY MOMENT by pressing photoresistor
+  if (s4 < plow) {
+    // creates white square from the center of the screen
+    rectMode(CENTER);
+    fill (255);
+    R = 255;
+    G = 255;
+    B = 255;
+    rect (w/2, h/2, rect1, rect2);
+    rect1 += 10;
+    rect2 += 10;
+    // adds text
+    textSize(32);
+    fill (0);
+    text("Loading new game...", 300, 400); 
+
+    //when the rectangle is bigger than the screen changes text and restarts ball position
+    if (rect1 > w) {
+      ballx = w/2;
+      bally = h/2;
+      background (255);
+      fill (0);
+      text("Release to START", 300, 400);
+      delay (50);
+      // when stop pressing photoresistor it restarts game and variables
+      if (s4 > plow) {
+        delay (20);
+        mx = (int)random(1, 2); //initial speed across the X axis
+        my = (int)random(1, 2); //initial speed across the Y axis
+        rect1 = 0;
+        rect2 =0;
+        P1 = 0;
+        P2 = 0;
+        P3 = 0;
+        P4 = 0;
+      }
+    }
+  }
+  rectMode (CORNER);
+
+  // if ball touches yellow
+  if (ballx > s0map - r/2 && ballx < s0map + l + r/2 && bally > fw + a && bally < fw + a + r/2) {
+    // changes direction
+    my = -my;
+    // changes color
+    R = 255;
+    G = 220;
+    B = 10;
+    //adds 1 point to player
+    P1 += 1;
+  }
+
+  // if ball touches red
+  if (ballx < width - fw - a && ballx > width - r/2 - fw + a  && bally > s2map - r/2 && bally < s2map + l + r/2) {
+    // changes direction
+    mx = -mx;
+
+    // changes color
+    R = 255;
+    G = 0;
+    B = 0;
+
+    //adds 1 point to player
+    P2 += 1;
+  }
+
+  // if ball touches green
+  if (bally > height - fw - a - r/2 && bally < height - fw - a && ballx > s1map - r/2 && ballx < s1map + l + r/2) {
+    // changes direction
+    my = -my;
+    // changes color
+    R = 0;
+    G = 255;
+    B = 0;
+
+    //adds 1 point to player
+    P3 += 1;
+  }
+
+  // if ball touches blue
+  if (ballx > a + fw && ballx < r/2 + fw + a && bally > s3map - r/2 && bally < s3map + l + r/2) {
+    // changes direction
+    mx = -mx;
+    // changes color
+    R = 0;
+    G = 0;
+    B = 255;
+
+    //adds 1 point to player
+    P4 += 1;
+  }
+
+  // IF BALL EXITS SCREEN IN YELLOW SIDE
+  if (bally < 0 - r * 2) {
+    mx = v0;
+    my = v0;
+    fill (255, 220, 10);
+    rectMode (CENTER);
+    rect (w/2, h/2, rectyellow, rectyellow);
+    rectyellow += 5;
+    rectyellow += 5;
+    textSize(32);
+    fill (0);
+    text("Yellow Player Loses", 290, 420); 
+
+    if (rectyellow > w) {
+
+      background (255);
+      fill (0);
+      text("Press to START", 300, 400);
+      delay (50);
+      if (s4 < plow) {
+        delay (100);
+        if (s4 > plow) {
+          ballx = w/2;
+          bally = h/2;
+          rect1 = 0;
+          rect2 = 0;
+          P1 = 0;
+          P2 = 0;
+          P3 = 0;
+          P4 = 0;
+          rectyellow = 0;
+          mx = (int)random(-1, -2); //new speed across the X axis
+          my = (int)random(1, 2); //new speed across the Y axis
+          delay (20);
+        }
+      }
+    }
+  }
+
+
+  // IF BALL EXITS SCREEN IN RED SIDE
+  if (ballx > width + r * 2) {
+    mx = v0;
+    my = v0;
+    fill (255, 0, 0);
+    rectMode (CENTER);
+    rect (w/2, h/2, rectred, rectred);
+    rectred += 5;
+    rectred += 5;
+    textSize(32);
+    fill (0);
+    text("Red Player Loses", 310, 420); 
+
+    if (rectred > w) {
+
+      background (255);
+      fill (0);
+      text("Press to START", 300, 400);
+      delay (50);
+      if (s4 < plow) {
+        delay (100);
+        if (s4 > plow) {
+          ballx = w/2;
+          bally = h/2;
+          rect1 = 0;
+          rect2 = 0;
+          P1 = 0;
+          P2 = 0;
+          P3 = 0;
+          P4 = 0;
+          rectred = 0;
+          mx = (int)random(1, 2); //new speed across the X axis
+          my = (int)random(-1, -2); //new speed across the Y axis
+          delay (20);
+        }
+      }
+    }
+  }
+
+
+  // IF BALL EXITS SCREEN IN GREEN SIDE
+  if (bally > height + r*2) {
+    mx = v0;
+    my = v0;
+    fill (0, 255, 0);
+    rectMode (CENTER);
+    rect (w/2, h/2, rectgreen, rectgreen);
+    rectgreen += 5;
+    rectgreen += 5;
+    textSize(32);
+    fill (0);
+    text("Green Player Loses", 320, 420); 
+
+    if (rectgreen > w) {
+
+      background (255);
+      fill (0);
+      text("Press to START", 300, 400);
+      delay (50);
+      if (s4 < plow) {
+        delay (100);
+        if (s4 > plow) {
+          ballx = w/2;
+          bally = h/2;
+          rectgreen = 0;
+          rectgreen = 0;
+          P1 = 0;
+          P2 = 0;
+          P3 = 0;
+          P4 = 0;
+          rectgreen = 0;
+          mx = (int)random(-1, -2); //new speed across the X axis
+          my = (int)random(1, 2); //new speed across the Y axis
+          delay (20);
+        }
+      }
+    }
+  }
+
+  // IF BALL EXITS SCREEN IN BLUE SIDE
+  if (ballx < 0 - r*2 ) {
+    mx = v0;
+    my = v0;
+    fill (0, 0, 255);
+    rectMode (CENTER);
+    rect (w/2, h/2, rectblue, rectblue);
+    rectblue += 5;
+    rectblue += 5;
+    textSize(32);
+    fill (0);
+    text("Blue Player Loses", 320, 420); 
+
+    if (rectblue > w) {
+
+      background (255);
+      fill (0);
+      text("Press to START", 300, 400);
+      delay (50);
+      if (s4 < plow) {
+        delay (100);
+        if (s4 > plow) {
+          ballx = w/2;
+          bally = h/2;
+          rect1 = 0;
+          rect2 = 0;
+          P1 = 0;
+          P2 = 0;
+          P3 = 0;
+          P4 = 0;
+          rectblue = 0;
+          mx = (int)random(1, 2); //new speed across the X axis
+          my = (int)random(1, 2); //new speed across the Y axis
+          delay (20);
+        }
+      }
+    }
+  }
+
+  rectMode(CORNER);
+}
+
+/********************************************************************************************* FUNCTION TO READ ANALOG OUTPUT VALUES INTO INT ********************************************************************************************/
+
+void serialEvent(Serial myPort) {
+
+  String myString = myPort.readStringUntil('\n'); //read as string until new line
+  if (myString != null) { //if string is different from null
+    myString = trim(myString); //removeswhite space
+
+    float sensors[] = float(split(myString, ',')); // divide the string when there is a comma and convert the values into integers
+    for (int sensorNum = 0; sensorNum < sensors.length; sensorNum++) {
+      print("Sensor " + sensorNum + ": " + sensors[sensorNum] + "\t"); //print sensor values to check
+    }
+
+    println(); //new line between strings
+    println ("X: " + ballx + "   Y:" + bally);
+    println ("mx: " + mx + "    my: " + my);
+
+    if (sensors.length > 1) { //hold int from string into new variables to use in void draw()
+      s0 = sensors [0]; //holds variable for 1st string value
+      s1 = sensors [1]; //holds variable for 2nd string value
+      s2 = sensors [2]; //holds variable for 3rd string value
+      s3 = sensors [3]; //holds variable for 4th string value
+      s4 = sensors [4]; //holds variable for 5th string value
+    }
+  }
+}
